@@ -225,7 +225,7 @@ describe('parse', () => {
                 ++msgNum;
                 expect(msg).toEqual({
                     id: 'abc',
-                    data: '',
+                    data: 'test',
                     event: '',
                     retry: undefined,
                 });
@@ -234,6 +234,7 @@ describe('parse', () => {
             // act:
             next(encoder.encode('id: abc'), 2);
             next(encoder.encode('foo: null'), 3);
+            next(encoder.encode('data: test'), 4);
             next(encoder.encode(''), -1);
 
             // assert:
@@ -250,7 +251,7 @@ describe('parse', () => {
                 ++msgNum;
                 expect(msg).toEqual({
                     id: '',
-                    data: '',
+                    data: 'test',
                     event: '',
                     retry: undefined,
                 });
@@ -258,27 +259,24 @@ describe('parse', () => {
 
             // act:
             next(encoder.encode('retry: def'), 5);
+            next(encoder.encode('data: test'), 4);
             next(encoder.encode(''), -1);
 
             // assert:
             expect(msgNum).toBe(1);
         });
 
-        it('skip comment-only messages', () => {
+        it('should not dispatch message with empty data (per SSE spec)', () => {
             // arrange:
+            // per spec: "If the data buffer is an empty string, set the data buffer
+            // and the event type buffer to the empty string and return."
             let msgNum = 0;
             const next = parse.getMessages(id => {
                 expect(id).toEqual('123');
             }, _retry => {
                 fail('retry should not be called');
-            }, msg => {
+            }, _msg => {
                 ++msgNum;
-                expect(msg).toEqual({
-                    retry: undefined,
-                    id: '123',
-                    event: 'foo ',
-                    data: '',
-                });
             });
 
             // act:
@@ -288,8 +286,30 @@ describe('parse', () => {
             next(encoder.encode('event: foo '), 5);
             next(encoder.encode(''), -1);
 
-            // assert:
-            expect(msgNum).toBe(1);
+            // assert: message should NOT be dispatched since data is empty
+            expect(msgNum).toBe(0);
+        });
+
+        it('should not dispatch for comment-only keepalive (issue #48)', () => {
+            // arrange:
+            // servers send ":" as keepalive every 15 seconds - should not trigger onmessage
+            let msgNum = 0;
+            const next = parse.getMessages(_id => {
+                fail('id should not be called');
+            }, _retry => {
+                fail('retry should not be called');
+            }, _msg => {
+                ++msgNum;
+            });
+
+            // act: simulate keepalive comments
+            next(encoder.encode(':'), 0);
+            next(encoder.encode(''), -1);
+            next(encoder.encode(': keepalive'), 0);
+            next(encoder.encode(''), -1);
+
+            // assert: no messages should be dispatched
+            expect(msgNum).toBe(0);
         });
 
         it('should append data split across multiple lines', () => {
@@ -333,7 +353,7 @@ describe('parse', () => {
             }, msg => {
                 ++msgNum;
                 expect(msg).toEqual({
-                    data: '',
+                    data: 'test',
                     id: '',
                     event: '',
                     retry: undefined,
@@ -343,6 +363,7 @@ describe('parse', () => {
             // act:
             next(encoder.encode('id: foo'), 2);
             next(encoder.encode('id'), 2);
+            next(encoder.encode('data: test'), 4);
             next(encoder.encode(''), -1);
 
             // assert:

@@ -128,7 +128,11 @@ export function getMessages(
     return function onLine(line: Uint8Array, fieldLength: number) {
         if (line.length === 0) {
             // empty line denotes end of message. Trigger the callback and start a new message:
-            onMessage?.(message);
+            // per spec, only dispatch if data is not empty (ignore comment-only messages)
+            // https://html.spec.whatwg.org/multipage/server-sent-events.html#dispatchMessage
+            if (message.data) {
+                onMessage?.(message);
+            }
             message = newMessage();
         } else if (fieldLength > 0) { // exclude comments and lines with no values
             // line is of format "<field>:<value>" or "<field>: <value>"
