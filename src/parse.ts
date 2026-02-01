@@ -128,6 +128,11 @@ export function getMessages(
     return function onLine(line: Uint8Array, fieldLength: number) {
         if (line.length === 0) {
             // empty line denotes end of message. Trigger the callback and start a new message:
+            // per spec: "If the data buffer's last character is a U+000A LINE FEED (LF) character,
+            // then remove the last character from the data buffer."
+            if (message.data.endsWith('\n')) {
+                message.data = message.data.slice(0, -1);
+            }
             // per spec, only dispatch if data is not empty (ignore comment-only messages)
             // https://html.spec.whatwg.org/multipage/server-sent-events.html#dispatchMessage
             if (message.data) {
@@ -143,11 +148,9 @@ export function getMessages(
 
             switch (field) {
                 case 'data':
-                    // if this message already has data, append the new value to the old.
-                    // otherwise, just set to the new value:
-                    message.data = message.data
-                        ? message.data + '\n' + value
-                        : value; // otherwise, 
+                    // per spec: "Append the field value to the data buffer,
+                    // then append a single U+000A LINE FEED (LF) character to the data buffer."
+                    message.data += value + '\n';
                     break;
                 case 'event':
                     message.event = value;
