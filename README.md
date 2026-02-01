@@ -97,6 +97,24 @@ This library is written in typescript and targets ES2017 features supported by a
 require('fast-text-encoding');
 ```
 
+# Connection Limits
+
+This library does not impose any connection limits, but browsers and servers do. Keep these limitations in mind when designing your application:
+
+| Factor | Typical Limit | Notes |
+|--------|---------------|-------|
+| HTTP/1.1 connections per domain | ~6 | Browser-enforced limit |
+| HTTP/2 streams per connection | ~100-256 | Better multiplexing, but still limited |
+| Browser memory | Varies | Each connection consumes memory |
+| Server connections | Varies | Depends on server configuration |
+
+**Recommendations for applications requiring many concurrent streams:**
+
+1. **Use HTTP/2** on your server to benefit from connection multiplexing
+2. **Consolidate streams** - use a single SSE connection with event routing instead of many separate connections
+3. **Consider alternatives** - for 100+ real-time streams, WebSockets or a pub/sub architecture may be more appropriate
+4. **Close unused connections** - use the `AbortController` to close connections when they're no longer needed
+
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
