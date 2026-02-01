@@ -539,6 +539,41 @@ describe('fetch', () => {
             await promise;
         });
 
+        it('should not double-abort controller on visibility change (issue #58)', async () => {
+            const controller = new AbortController();
+            let internalAbortCount = 0;
+
+            const mockFetch = jest.fn().mockImplementation((_url: string, init: RequestInit) => {
+                // Track abort calls on the internal controller
+                const signal = init.signal as AbortSignal;
+                signal.addEventListener('abort', () => {
+                    internalAbortCount++;
+                });
+                return new Promise(() => {}); // Never resolve
+            });
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                signal: controller.signal,
+                openWhenHidden: false
+            });
+
+            // Simulate visibility change - this aborts the internal controller
+            Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+
+            // The internal controller should be aborted once
+            expect(internalAbortCount).toBe(1);
+
+            // Now user aborts - dispose() is called but should not double-abort
+            controller.abort();
+            await promise;
+
+            // Internal controller was only aborted once (by visibility change)
+            // The dispose() from user abort should not call abort() again
+            expect(internalAbortCount).toBe(1);
+        });
+
         it('should clear last-event-id when id is empty', async () => {
             let callCount = 0;
             const mockFetch = jest.fn().mockImplementation(() => {
