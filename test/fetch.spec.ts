@@ -465,6 +465,45 @@ describe('fetch', () => {
             await promise;
         });
 
+        it('should not retry aborted requests during rapid tab switches (issue #34)', async () => {
+            const controller = new AbortController();
+            const onerror = jest.fn().mockReturnValue(100);
+            let fetchCallCount = 0;
+
+            // First fetch will be slow and get aborted, second will succeed
+            const mockFetch = jest.fn().mockImplementation(() => {
+                fetchCallCount++;
+                if (fetchCallCount === 1) {
+                    // Slow request that will be aborted by visibility change
+                    return new Promise((_, reject) => {
+                        setTimeout(() => reject(new DOMException('Aborted', 'AbortError')), 100);
+                    });
+                }
+                return Promise.resolve(createMockResponse('data: test\n\n'));
+            });
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                signal: controller.signal,
+                openWhenHidden: false,
+                onerror
+            });
+
+            // Simulate rapid tab switch: hidden then visible
+            Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+
+            Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+
+            await jest.advanceTimersByTimeAsync(200);
+            await promise;
+
+            // onerror should NOT be called for the aborted request
+            expect(onerror).not.toHaveBeenCalled();
+            expect(mockFetch).toHaveBeenCalledTimes(2);
+        });
+
         it('should not retry errors when page is hidden and openWhenHidden is false (issue #47)', async () => {
             const mockFetch = jest.fn().mockRejectedValue(new Error('network error'));
             const controller = new AbortController();

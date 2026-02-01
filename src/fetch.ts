@@ -114,12 +114,15 @@ export function fetchEventSource(input: RequestInfo, {
                 headers[LastEventId] = lastEventId;
             }
 
-            curRequestController = new AbortController();
+            // Store controller in local scope to avoid race condition during rapid tab switches.
+            // Without this, the catch block might check a different controller's abort status.
+            const currentController = new AbortController();
+            curRequestController = currentController;
             try {
                 const response = await fetch(input, {
                     ...rest,
                     headers,
-                    signal: curRequestController.signal,
+                    signal: currentController.signal,
                 });
 
                 await onopen(response);
@@ -140,7 +143,7 @@ export function fetchEventSource(input: RequestInfo, {
                 dispose();
                 resolve();
             } catch (err) {
-                if (!curRequestController.signal.aborted) {
+                if (!currentController.signal.aborted) {
                     // if we haven't aborted the request ourselves:
                     try {
                         // check if we need to retry:
