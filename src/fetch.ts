@@ -146,6 +146,12 @@ export function fetchEventSource(input: RequestInfo, {
                         // check if we need to retry:
                         const interval: any = onerror?.(err) ?? retryInterval;
                         window.clearTimeout(retryTimer);
+                        // if user aborted during onerror callback, stop retrying:
+                        if (inputSignal?.aborted) {
+                            dispose();
+                            resolve();
+                            return;
+                        }
                         // if page is hidden and openWhenHidden is false, don't retry now.
                         // onVisibilityChange will call create() when page becomes visible.
                         if (!openWhenHidden && document.hidden) {
