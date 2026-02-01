@@ -9,4 +9,7 @@ module.exports = {
     'src/**/*.ts',
   ],
   coverageDirectory: 'coverage',
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
 };
