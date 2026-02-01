@@ -1,7 +1,15 @@
 {
-  "name": "fetch-event-source",
-  "version": "2.0.1",
+  "name": "@rayjp2010/fetch-event-source",
+  "version": "3.0.0",
   "description": "A better API for making Event Source requests, with all the features of fetch()",
+  "keywords": [
+    "sse",
+    "server-sent-events",
+    "eventsource",
+    "fetch",
+    "streaming",
+    "event-stream"
+  ],
   "homepage": "https://github.com/rayjp2010/fetch-event-source#readme",
   "repository": "github:rayjp2010/fetch-event-source",
   "bugs": {
@@ -13,6 +21,9 @@
   "module": "lib/esm/index.js",
   "types": "lib/cjs/index.d.ts",
   "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "clean": "rimraf ./lib ./coverage",
     "prebuild": "pnpm run clean",

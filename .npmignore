@@ -4,11 +4,18 @@ coverage/
 lib/*.map
 lib/*.spec.*
 src/
+test/
 .nycrc
-jasmine.json
 tsconfig.json
-*.md
+tsconfig.esm.json
+CLAUDE.md
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+jest.config.js
 
-## IntellIJ files
+## IDE files
 .idea
 *.iml
+.claude
