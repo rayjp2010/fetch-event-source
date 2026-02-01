@@ -91,6 +91,38 @@ fetchEventSource('/api/sse', {
 });
 ```
 
+# Closing the Connection
+
+To close the connection from the client side, use an `AbortController` and call `abort()` when you want to stop:
+
+```ts
+const ctrl = new AbortController();
+
+fetchEventSource('/api/sse', {
+    signal: ctrl.signal,
+    onmessage(msg) {
+        console.log(msg.data);
+
+        // Close based on a message from the server:
+        if (msg.event === 'done') {
+            ctrl.abort();
+        }
+    }
+});
+
+// Or close from elsewhere, e.g., when the user clicks a button:
+document.getElementById('stop').addEventListener('click', () => {
+    ctrl.abort();
+});
+
+// Or close when a component unmounts (React example):
+useEffect(() => {
+    const ctrl = new AbortController();
+    fetchEventSource('/api/sse', { signal: ctrl.signal, ... });
+    return () => ctrl.abort();
+}, []);
+```
+
 # Compatibility
 This library is written in typescript and targets ES2017 features supported by all evergreen browsers (Chrome, Firefox, Safari, Edge.) You might need to [polyfill TextDecoder](https://www.npmjs.com/package/fast-text-encoding) for old Edge (versions < 79), though:
 ```js
