@@ -134,6 +134,61 @@ describe('fetch', () => {
             );
         });
 
+        it('should support headers as a function (issue #39)', async () => {
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('data: test\n\n')
+            );
+            const headersFunc = jest.fn().mockReturnValue({
+                Authorization: 'Bearer token123'
+            });
+
+            await fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                headers: headersFunc
+            });
+
+            expect(headersFunc).toHaveBeenCalledTimes(1);
+            expect(mockFetch).toHaveBeenCalledWith(
+                'http://test.com/sse',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        Authorization: 'Bearer token123',
+                        accept: EventStreamContentType
+                    })
+                })
+            );
+        });
+
+        it('should call headers function on each retry for fresh tokens (issue #39)', async () => {
+            let callCount = 0;
+            const mockFetch = jest.fn().mockImplementation(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return Promise.reject(new Error('network error'));
+                }
+                return Promise.resolve(createMockResponse('data: test\n\n'));
+            });
+
+            let tokenVersion = 1;
+            const headersFunc = jest.fn().mockImplementation(() => ({
+                Authorization: `Bearer token-v${tokenVersion++}`
+            }));
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                headers: headersFunc
+            });
+
+            await jest.advanceTimersByTimeAsync(1000);
+            await promise;
+
+            expect(headersFunc).toHaveBeenCalledTimes(2);
+            expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer token-v1');
+            expect(mockFetch.mock.calls[1][1].headers.Authorization).toBe('Bearer token-v2');
+        });
+
         it('should call onopen with response', async () => {
             const mockResponse = createMockResponse('data: test\n\n');
             const mockFetch = jest.fn().mockResolvedValue(mockResponse);

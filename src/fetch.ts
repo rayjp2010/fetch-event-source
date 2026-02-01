@@ -5,11 +5,13 @@ export const EventStreamContentType = 'text/event-stream';
 const DefaultRetryInterval = 1000;
 const LastEventId = 'last-event-id';
 
-export interface FetchEventSourceInit extends RequestInit {
+export interface FetchEventSourceInit extends Omit<RequestInit, 'headers'> {
     /**
-     * The request headers. FetchEventSource only supports the Record<string,string> format.
+     * The request headers. FetchEventSource only supports the Record<string,string> format,
+     * or a function that returns headers. Using a function allows dynamic headers that are
+     * refreshed on each retry, useful for updating Authorization tokens.
      */
-    headers?: Record<string, string>,
+    headers?: Record<string, string> | (() => Record<string, string>),
 
     /**
      * Called when a response is received. Use this to validate that the response
@@ -64,13 +66,14 @@ export function fetchEventSource(input: RequestInfo, {
     fetch: inputFetch,
     ...rest
 }: FetchEventSourceInit) {
+    // Create a function to get headers, supporting both static and dynamic headers
+    const getHeaders: () => Record<string, string> = typeof inputHeaders === 'function'
+        ? inputHeaders
+        : () => ({ ...(inputHeaders ?? {}) });
+
     return new Promise<void>((resolve, reject) => {
-        // make a copy of the input headers since we may modify it below:
-        // use nullish coalescing to handle null/undefined headers (can occur after React navigation)
-        const headers = { ...(inputHeaders ?? {}) };
-        if (!headers.accept) {
-            headers.accept = EventStreamContentType;
-        }
+        // Track last-event-id separately so it persists across retries even with dynamic headers
+        let lastEventId: string | undefined;
 
         let curRequestController: AbortController;
         function onVisibilityChange() {
@@ -101,6 +104,16 @@ export function fetchEventSource(input: RequestInfo, {
         const fetch = inputFetch ?? window.fetch;
         const onopen = inputOnOpen ?? defaultOnOpen;
         async function create() {
+            // Get fresh headers on each attempt (supports dynamic headers for token refresh)
+            const headers = getHeaders();
+            if (!headers.accept) {
+                headers.accept = EventStreamContentType;
+            }
+            // Add last-event-id if we have one from a previous connection
+            if (lastEventId) {
+                headers[LastEventId] = lastEventId;
+            }
+
             curRequestController = new AbortController();
             try {
                 const response = await fetch(input, {
@@ -110,14 +123,14 @@ export function fetchEventSource(input: RequestInfo, {
                 });
 
                 await onopen(response);
-                
+
                 await getBytes(response.body!, getLines(getMessages(id => {
                     if (id) {
                         // store the id and send it back on the next retry:
-                        headers[LastEventId] = id;
+                        lastEventId = id;
                     } else {
                         // don't send the last-event-id header anymore:
-                        delete headers[LastEventId];
+                        lastEventId = undefined;
                     }
                 }, retry => {
                     retryInterval = retry;
