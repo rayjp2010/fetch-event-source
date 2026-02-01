@@ -389,6 +389,41 @@ describe('fetch', () => {
             await promise;
         });
 
+        it('should not retry errors when page is hidden and openWhenHidden is false (issue #47)', async () => {
+            const mockFetch = jest.fn().mockRejectedValue(new Error('network error'));
+            const controller = new AbortController();
+            const onerror = jest.fn().mockReturnValue(100); // 100ms retry
+
+            // Set page as hidden before starting
+            Object.defineProperty(document, 'hidden', { value: true, configurable: true });
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                signal: controller.signal,
+                openWhenHidden: false,
+                onerror
+            });
+
+            // First call happens immediately
+            await jest.advanceTimersByTimeAsync(0);
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(onerror).toHaveBeenCalledTimes(1);
+
+            // Advance time - retry should NOT happen because page is hidden
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(mockFetch).toHaveBeenCalledTimes(1); // Still 1, no retry
+
+            // Now make page visible - should trigger retry
+            Object.defineProperty(document, 'hidden', { value: false, configurable: true });
+            document.dispatchEvent(new Event('visibilitychange'));
+
+            await jest.advanceTimersByTimeAsync(0);
+            expect(mockFetch).toHaveBeenCalledTimes(2); // Now retried
+
+            controller.abort();
+            await promise;
+        });
+
         it('should clear last-event-id when id is empty', async () => {
             let callCount = 0;
             const mockFetch = jest.fn().mockImplementation(() => {
