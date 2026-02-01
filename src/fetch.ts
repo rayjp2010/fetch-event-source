@@ -92,7 +92,10 @@ export function fetchEventSource(input: RequestInfo, {
         function dispose() {
             document.removeEventListener('visibilitychange', onVisibilityChange);
             window.clearTimeout(retryTimer);
-            curRequestController.abort();
+            // Only abort if not already aborted to avoid unnecessary DOMException logs
+            if (!curRequestController.signal.aborted) {
+                curRequestController.abort();
+            }
         }
 
         // if the incoming signal aborts, dispose resources and resolve:
