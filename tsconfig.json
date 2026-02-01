@@ -18,5 +18,7 @@
             "DOM",
             "ES2018"
         ]
-    }
+    },
+    "include": ["src"],
+    "exclude": ["test", "node_modules"]
 }
