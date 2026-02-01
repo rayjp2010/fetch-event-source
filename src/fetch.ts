@@ -148,6 +148,9 @@ export function fetchEventSource(input: RequestInfo, {
 }
 
 function defaultOnOpen(response: Response) {
+    if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}: ${response.statusText}`);
+    }
     const contentType = response.headers.get('content-type');
     if (!contentType?.startsWith(EventStreamContentType)) {
         throw new Error(`Expected content-type to be ${EventStreamContentType}, Actual: ${contentType}`);

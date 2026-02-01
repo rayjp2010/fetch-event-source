@@ -1,6 +1,11 @@
 import { fetchEventSource, EventStreamContentType } from '../src/fetch';
 
-function createMockResponse(body: string, contentType = EventStreamContentType): Response {
+function createMockResponse(
+    body: string,
+    contentType = EventStreamContentType,
+    status = 200,
+    statusText = 'OK'
+): Response {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
         start(controller) {
@@ -10,6 +15,8 @@ function createMockResponse(body: string, contentType = EventStreamContentType):
     });
 
     return new Response(stream, {
+        status,
+        statusText,
         headers: { 'content-type': contentType }
     });
 }
@@ -173,6 +180,48 @@ describe('fetch', () => {
             expect(onerror).toHaveBeenCalledWith(
                 expect.objectContaining({
                     message: expect.stringContaining('Expected content-type to be text/event-stream')
+                })
+            );
+        });
+
+        it('should throw error with status code for non-ok response (issue #50)', async () => {
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('Not Found', 'text/plain', 404, 'Not Found')
+            );
+            const onerror = jest.fn().mockImplementation(() => {
+                throw new Error('stop retry');
+            });
+
+            await expect(fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                onerror
+            })).rejects.toThrow('stop retry');
+
+            expect(onerror).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: expect.stringContaining('Request failed with status 404')
+                })
+            );
+        });
+
+        it('should throw error for 500 server error with default onopen', async () => {
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('Internal Server Error', 'text/html', 500, 'Internal Server Error')
+            );
+            const onerror = jest.fn().mockImplementation(() => {
+                throw new Error('stop retry');
+            });
+
+            await expect(fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                onerror
+            })).rejects.toThrow('stop retry');
+
+            expect(onerror).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    message: expect.stringContaining('Request failed with status 500')
                 })
             );
         });
