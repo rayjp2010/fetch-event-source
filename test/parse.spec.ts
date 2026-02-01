@@ -1,4 +1,4 @@
-import * as parse from './parse';
+import * as parse from '../src/parse';
 
 describe('parse', () => {
     const encoder = new TextEncoder();
