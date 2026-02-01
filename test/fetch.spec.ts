@@ -297,6 +297,25 @@ describe('fetch', () => {
             await expect(promise).resolves.toBeUndefined();
         });
 
+        it('should resolve immediately when signal is already aborted (issue #98)', async () => {
+            const controller = new AbortController();
+            controller.abort(); // Abort before calling fetchEventSource
+
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('data: test\n\n')
+            );
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                signal: controller.signal,
+                openWhenHidden: true
+            });
+
+            await expect(promise).resolves.toBeUndefined();
+            // fetch should never be called since signal was already aborted
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
         it('should retry on error with default interval', async () => {
             let callCount = 0;
             const mockFetch = jest.fn().mockImplementation(() => {

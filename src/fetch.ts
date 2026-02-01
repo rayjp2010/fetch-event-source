@@ -72,6 +72,12 @@ export function fetchEventSource(input: RequestInfo, {
         : () => ({ ...(inputHeaders ?? {}) });
 
     return new Promise<void>((resolve, reject) => {
+        // Handle already-aborted signal immediately to match native fetch behavior
+        if (inputSignal?.aborted) {
+            resolve();
+            return;
+        }
+
         // Track last-event-id separately so it persists across retries even with dynamic headers
         let lastEventId: string | undefined;
 
