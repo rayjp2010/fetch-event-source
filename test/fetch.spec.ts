@@ -84,6 +84,49 @@ describe('fetch', () => {
             );
         });
 
+        it('should handle null headers without throwing (issue #52)', async () => {
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('data: test\n\n')
+            );
+
+            // This simulates React state being null after navigation
+            await fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                headers: null as unknown as Record<string, string>
+            });
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'http://test.com/sse',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        accept: EventStreamContentType
+                    })
+                })
+            );
+        });
+
+        it('should handle undefined headers without throwing', async () => {
+            const mockFetch = jest.fn().mockResolvedValue(
+                createMockResponse('data: test\n\n')
+            );
+
+            await fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                openWhenHidden: true,
+                headers: undefined
+            });
+
+            expect(mockFetch).toHaveBeenCalledWith(
+                'http://test.com/sse',
+                expect.objectContaining({
+                    headers: expect.objectContaining({
+                        accept: EventStreamContentType
+                    })
+                })
+            );
+        });
+
         it('should call onopen with response', async () => {
             const mockResponse = createMockResponse('data: test\n\n');
             const mockFetch = jest.fn().mockResolvedValue(mockResponse);

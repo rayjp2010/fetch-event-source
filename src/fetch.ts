@@ -66,7 +66,8 @@ export function fetchEventSource(input: RequestInfo, {
 }: FetchEventSourceInit) {
     return new Promise<void>((resolve, reject) => {
         // make a copy of the input headers since we may modify it below:
-        const headers = { ...inputHeaders };
+        // use nullish coalescing to handle null/undefined headers (can occur after React navigation)
+        const headers = { ...(inputHeaders ?? {}) };
         if (!headers.accept) {
             headers.accept = EventStreamContentType;
         }
