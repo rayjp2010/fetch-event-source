@@ -123,6 +123,26 @@ useEffect(() => {
 }, []);
 ```
 
+# Page Visibility
+
+**Important:** By default, this library closes the connection when the page is hidden (e.g., user switches tabs or minimizes the window) and reconnects when visible again. This differs from the native `EventSource` which stays connected.
+
+To keep the connection open even when the page is hidden, set `openWhenHidden: true`:
+
+```ts
+fetchEventSource('/api/sse', {
+    openWhenHidden: true, // Keep connection open when page is hidden
+    onmessage(msg) {
+        console.log(msg.data);
+    }
+});
+```
+
+| `openWhenHidden` | Behavior |
+|------------------|----------|
+| `false` (default) | Connection closes when hidden, reconnects when visible |
+| `true` | Connection stays open regardless of page visibility |
+
 # Compatibility
 This library is written in typescript and targets ES2017 features supported by all evergreen browsers (Chrome, Firefox, Safari, Edge.) You might need to [polyfill TextDecoder](https://www.npmjs.com/package/fast-text-encoding) for old Edge (versions < 79), though:
 ```js
