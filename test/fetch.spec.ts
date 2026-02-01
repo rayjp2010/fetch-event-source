@@ -300,6 +300,27 @@ describe('fetch', () => {
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
+        it('should stop retrying when signal is aborted in onerror callback', async () => {
+            const controller = new AbortController();
+            const mockFetch = jest.fn().mockRejectedValue(new Error('network error'));
+            const onerror = jest.fn().mockImplementation(() => {
+                controller.abort(); // abort during onerror
+                return 100; // would retry in 100ms if not aborted
+            });
+
+            const promise = fetchEventSource('http://test.com/sse', {
+                fetch: mockFetch,
+                signal: controller.signal,
+                openWhenHidden: true,
+                onerror
+            });
+
+            await promise;
+
+            expect(mockFetch).toHaveBeenCalledTimes(1);
+            expect(onerror).toHaveBeenCalledTimes(1);
+        });
+
         it('should send last-event-id header on retry', async () => {
             let callCount = 0;
             const mockFetch = jest.fn().mockImplementation(() => {
