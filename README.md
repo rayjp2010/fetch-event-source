@@ -91,6 +91,27 @@ fetchEventSource('/api/sse', {
 });
 ```
 
+You can implement exponential backoff to avoid overwhelming the server during outages:
+
+```ts
+let retryCount = 0;
+
+fetchEventSource('/api/sse', {
+    async onopen(response) {
+        if (response.ok) {
+            retryCount = 0; // Reset on successful connection
+        }
+    },
+    onerror(err) {
+        retryCount++;
+        // Exponential backoff: 1s, 2s, 4s, 8s... max 30s
+        const backoff = Math.min(1000 * Math.pow(2, retryCount - 1), 30000);
+        console.log(`Retrying in ${backoff}ms...`);
+        return backoff;
+    }
+});
+```
+
 # Closing the Connection
 
 To close the connection from the client side, use an `AbortController` and call `abort()` when you want to stop:
