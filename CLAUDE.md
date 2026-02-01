@@ -7,9 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 pnpm run build      # Build both CJS and ESM outputs (runs clean first)
 pnpm run clean      # Remove lib/ and coverage/ directories
+pnpm test           # Run Jest tests
 ```
-
-Note: There is no test runner configured in package.json. The `parse.spec.ts` file uses Jasmine syntax but no test command is set up.
 
 ## Architecture
 
@@ -28,7 +27,7 @@ This is a TypeScript library that provides a fetch-based alternative to the brow
 
 ### Key Types
 
-- `FetchEventSourceInit` - Extends RequestInit with callbacks: `onopen`, `onmessage`, `onclose`, `onerror`
+- `FetchEventSourceInit` - Extends RequestInit with callbacks: `onopen`, `onmessage`, `onclose`, `onerror`. Also supports `headers` as a function for dynamic token refresh.
 - `EventSourceMessage` - Message shape: `{ id, event, data, retry? }`
 
 ### Build Output

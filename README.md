@@ -53,6 +53,18 @@ fetchEventSource('/api/sse', {
 });
 ```
 
+You can use a function for `headers` to get fresh values on each request/retry, useful for refreshing auth tokens:
+```ts
+fetchEventSource('/api/sse', {
+    headers: () => ({
+        Authorization: `Bearer ${getLatestToken()}`,
+    }),
+    onmessage(msg) {
+        console.log(msg.data);
+    }
+});
+```
+
 You can add better error handling, for example:
 ```ts
 class RetriableError extends Error { }
