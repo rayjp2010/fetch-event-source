@@ -133,6 +133,11 @@ export function fetchEventSource(input: RequestInfo, {
                         // check if we need to retry:
                         const interval: any = onerror?.(err) ?? retryInterval;
                         window.clearTimeout(retryTimer);
+                        // if page is hidden and openWhenHidden is false, don't retry now.
+                        // onVisibilityChange will call create() when page becomes visible.
+                        if (!openWhenHidden && document.hidden) {
+                            return;
+                        }
                         retryTimer = window.setTimeout(create, interval);
                     } catch (innerErr) {
                         // we should not retry anymore:
